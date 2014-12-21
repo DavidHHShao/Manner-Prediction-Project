@@ -1,0 +1,238 @@
+---
+title: "Manner Prediction Project"
+date: "December 19, 2014"
+output: html_document
+---
+**Last updated `r as.character(Sys.time())` using `r R.version$version.string`.**
+
+## Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, my goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from [the website](http://groupware.les.inf.puc-rio.br/har) (see the section on the Weight Lifting Exercise Dataset). 
+
+##Problem
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+
+Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. 
+Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate
+
+The goal of my project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set.
+
+###Load Library
+```{r}
+library(AppliedPredictiveModeling)
+library(caret)
+library(rattle)
+library(rpart.plot)
+library(randomForest)
+```
+
+## Data Processing
+
+The training data for this project are available [here](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv ) 
+
+The test data are available [here](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+The data for this project come from [this source](http://groupware.les.inf.puc-rio.br/har)
+
+###Download Training Data and Test Data
+**Download the file and put the file  in the `data` folder**
+```{r,cache=TRUE}
+ if(!file.exists("./data")){dir.create("./data")}
+ fileUrl1 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+ fileUrl2<- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+ download.file(fileUrl1,destfile="./data/trainingData.csv",method="curl")
+ download.file(fileUrl2,destfile="./data/testData.csv",method="curl")
+```
+
+###Load Data
+```{r, cache=TRUE}
+trainingData <- read.csv("./data/trainingData.csv", header=TRUE, sep=",")
+testData <- read.csv("./data/testData.csv",header=TRUE, sep=",")  
+```
+```{r,cache=TRUE}
+dim(trainingData)
+dim(testData)
+```
+
+###Data Partition
+TrainingData is split into 60% data for training and 40% for testing
+
+```{r, cache=TRUE}
+inTrain <- createDataPartition(y=trainingData$classe, p=0.6, list=FALSE)
+myTraining <-trainingData[inTrain, ]
+myTesting <- trainingData[-inTrain, ]
+```
+```{r, cache=TRUE}
+dim(myTraining)
+dim(myTesting)
+```
+
+###Look at Properties of Data Sets
+```{r, cache=TRUE}
+str(trainingData)
+str(testData)
+```
+###Clean Data Sets
+**Remove unrelated variables (the first seven variables)**
+
+```{r}
+myTraining <-myTraining [,-(1:7) ]
+myTesting<- myTesting[,-(1:7) ]
+testData<- testData[,-(1:7)]
+```
+
+**Remove Variables with NAs**
+
+```{r, cache=TRUE}
+# Finding variables with  NAs in myTraining 
+RemoveVariableNamesIndex <- c()
+for(i in 1:length(myTraining)) {
+        if( sum( is.na( myTraining[, i] ) )  >0 ) { 
+       RemoveVariableNamesIndex <-c(RemoveVariableNamesIndex , i )
+    }
+}
+#Remove variables with  NAs 
+myTraining<-myTraining[,-RemoveVariableNamesIndex ]
+myTesting<-myTesting[,-RemoveVariableNamesIndex ]
+testData<-testData[,-RemoveVariableNamesIndex ]
+```
+
+
+###Pre-Precessing
+**Remove NearZeroVariance Variables** 
+```{r, cache=TRUE}
+nzv <- nearZeroVar(myTraining)
+myTraining<-myTraining[, -nzv]
+myTesting<-myTesting[, -nzv]
+testData<-testData[, -nzv]
+```
+```{r, cache=TRUE}
+dim(myTraining)
+dim(myTesting)
+```
+
+##Machine Learning Algrithms
+###Method: Classification Tree with RPART method.
+**cross validation  with 10 folds are applied.**
+
+```{r,cache=TRUE}
+set.seed(123)
+modFit <- train(myTraining$classe ~ .,  preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 10), data = myTraining, method="rpart")
+print(modFit$finalModel)
+```
+
+```{r, cache=TRUE}
+pred<-predict(modFit, newdata = myTesting)
+confusionMatrix(myTesting$classe, pred)
+```
+
+###Method: Classification Tree with Random Forest Method
+Since the size of myTrainingData is so larger that running Random Forest method is very very slow. 
+
+What I am doing is to start with  a subset  of size  3000 and increase the size of the subset  by 2000 each time until accuracy
+reach or exceed 0.98.
+
+Each time, the subset will be randomly sampled from `myTrainingData` without replacement.
+
+Also, cross validation  with 10 folds are applied for each prediction.
+
+####  Subset  of Size  3000
+```{r, cache=TRUE}
+set.seed(1234)
+sampleIndex1 <- sample(1:nrow(myTraining) , 3000, replace =FALSE)
+subMyTraining1<-myTraining[sampleIndex1,]
+set.seed(12345)
+modFit1<- train(subMyTraining1$classe ~ .,  preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 10), data = subMyTraining1, method="rf")
+print(modFit1$finalModel)
+```
+
+```{r, cache=TRUE}
+pred1<-predict(modFit1, newdata = myTesting)
+confusionMatrix(myTesting$classe, pred1)
+```
+
+####  Subset  of Size  5000
+```{r, cache=TRUE}
+set.seed(1234)
+sampleIndex2<- sample(1:nrow(myTraining) , 5000, replace =FALSE)
+subMyTraining2<-myTraining[sampleIndex2,]
+set.seed(12345)
+modFit2<- train(subMyTraining2$classe ~ .,  preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 10), data = subMyTraining2, method="rf")
+print(modFit2$finalModel)
+```
+
+```{r, cache=TRUE}
+pred2<-predict(modFit2, newdata = myTesting)
+confusionMatrix(myTesting$classe, pred2)
+```
+
+
+####  Subset  of Size  7000
+```{r, cache=TRUE}
+set.seed(1234)
+sampleIndex3<- sample(1:nrow(myTraining) , 7000, replace =FALSE)
+subMyTraining3<-myTraining[sampleIndex3,]
+set.seed(12345)
+modFit3<- train(subMyTraining3$classe ~ .,  preProcess=c("center", "scale"), trControl=trainControl(method = "cv", number = 10), data = subMyTraining3, method="rf")
+print(modFit3$finalModel)
+```
+
+```{r, cache=TRUE}
+pred3<-predict(modFit3, newdata = myTesting)
+confusionMatrix(myTesting$classe, pred3)
+```
+
+
+###Result Analysis
+
+From the above four predictions, cross validation  with 10 folds are applied for each prediction.
+
+We can expect that 
+
+- Random Forest method should perform better than RPART method. That is. Random Forest method has higher accuracy.
+- For the  Random Forest Method , in-Sample-error should less than the out-sample-error (i.e  1 - accuracy) for each  prediction
+- For the  Random Forest Method, as the size of data for training increase, out-sample-error should decrease.
+
+We can get results from the above four predictions as follows:
+
+Accuracy of Classification Tree with RPART method is 0.4814 , which is mch lower than Accuracy of any other Classification Tree with Random Forest method.
+
+Method| Size of Data for Training |  accurary | in-Sample-error | out-sample-error 
+---|---|---|---|---
+Classification Tree with Random Forest method| 3000| 95.93% | 3.87% | 4.07%
+Classification Tree with Random Forest method| 5000| 97.71% |  2.7% | 2.29%
+Classification Tree with Random Forest method| 7000| 97.94% | 1.5% | 2.06%
+
+From the table above, we can see
+
+- For the  Random Forest Method , in-Sample-error is less than the out-sample-error for each  prediction
+- For the  Random Forest Method, as the size of data for training increase, out-sample-error should decrease.
+
+Therefore, results match what we expected.
+
+By the above analysis, we will use Classification Tree with Random Forest method with Size of Data for Training  7000  to predict `testData` of size 20
+```{r}
+answers<-predict(modFit3, newdata = testData)
+```
+
+The prediction result is 
+```{r}
+answers
+```
+
+
+##Generate files for Submission Part
+```{r}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(answers)
+
+```
+
+
+
+

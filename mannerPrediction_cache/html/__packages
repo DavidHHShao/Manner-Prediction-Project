@@ -1,0 +1,9 @@
+AppliedPredictiveModeling
+base
+caret
+ggplot2
+lattice
+randomForest
+rattle
+rpart
+rpart.plot
