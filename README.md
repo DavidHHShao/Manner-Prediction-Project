@@ -15,13 +15,13 @@ The goal of my project is to predict the manner in which they did the exercise. 
 ##Tools used to produce this project
 - This project is built by `knirt` package instllled on RStudio with RMD (R Markdown) format.
 
-- The  `mannerPrediction.md` and `mannerPrediction.html` file will be  automatically  produced by `mannerPrediction.md`` 
+- The  `mannerPrediction.md` and `mannerPrediction.html` file will be  automatically  produced by `mannerPrediction.md`
 
-##Steps to produce this project
+##Steps to produce this project 
 
 - Plsease see the details in `mannerPrediction.md`.
 
-- Those files  contain the instructions and steps with R code embedded  to produce this project.
+- This file  contain the instructions and steps with R code embedded  to produce this project.
 
 ##Steps to reproduce this project
 
