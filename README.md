@@ -30,7 +30,7 @@ The goal of my project is to predict the manner in which they did the exercise. 
 
 ##View the project in HTML
 
-The website page for this project is [here](...)
+The website page for this project is [here](http://davidhhshao.github.io/Manner-Prediction-Project/mannerPrediction.html)
 
 Welcome to view my project !
 
