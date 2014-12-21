@@ -71,7 +71,7 @@ dim(myTesting)
 str(trainingData)
 str(testData)
 ```
-###Clean Data Sets
+###Clean Data 
 **Remove unrelated variables (the first seven variables)**
 
 ```{r}
